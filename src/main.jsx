@@ -33,22 +33,9 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from "firebase/auth";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  startAfter,
-  updateDoc
-} from "firebase/firestore";
-import { auth, db, isFirebaseConfigured } from "./firebase";
+import { auth, isFirebaseConfigured } from "./firebase";
 import { deleteImage, isSupabaseConfigured, uploadImage as uploadToSupabase } from "./lib/supabaseStorage";
+import { createGallery, deleteGallery, getGallery, updateGallery } from "./lib/galleryService";
 import "./styles.css";
 
 const ADMIN_WHATSAPP = import.meta.env.VITE_ADMIN_WHATSAPP || "6281234567890";
@@ -137,26 +124,31 @@ function PublicSite() {
   }, [dark]);
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    if (!isSupabaseConfigured) {
       setGallery(fallbackGallery);
       setLoadingGallery(false);
       return;
     }
 
-    const galleryQuery = query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(24));
-    const unsubscribe = onSnapshot(
-      galleryQuery,
-      (snapshot) => {
-        setGallery(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
-        setLoadingGallery(false);
-      },
-      () => {
-        setGallery(fallbackGallery);
-        setLoadingGallery(false);
-      }
-    );
+    let active = true;
 
-    return unsubscribe;
+    getGallery({ limit: 24 })
+      .then((data) => {
+        if (!active) return;
+        setGallery(data.length ? data : fallbackGallery);
+      })
+      .catch(() => {
+        if (!active) return;
+        setGallery(fallbackGallery);
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoadingGallery(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -616,7 +608,8 @@ function LoginPage() {
 
 function AdminDashboard({ user }) {
   const [items, setItems] = useState([]);
-  const [lastDoc, setLastDoc] = useState(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -624,10 +617,10 @@ function AdminDashboard({ user }) {
   const [form, setForm] = useState({ title: "", description: "", category: "Restorasi", file: null });
 
   const loadInitial = async () => {
-    const galleryQuery = query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(18));
-    const snapshot = await getDocs(galleryQuery);
-    setItems(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
-    setLastDoc(snapshot.docs.at(-1) || null);
+    const data = await getGallery({ limit: 18, offset: 0 });
+    setItems(data);
+    setOffset(data.length);
+    setHasMore(data.length === 18);
     setLoading(false);
   };
 
@@ -636,12 +629,12 @@ function AdminDashboard({ user }) {
   }, []);
 
   const loadMore = async () => {
-    if (!lastDoc) return;
+    if (!hasMore) return;
     setLoadingMore(true);
-    const galleryQuery = query(collection(db, "gallery"), orderBy("createdAt", "desc"), startAfter(lastDoc), limit(18));
-    const snapshot = await getDocs(galleryQuery);
-    setItems((current) => [...current, ...snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))]);
-    setLastDoc(snapshot.docs.at(-1) || null);
+    const data = await getGallery({ limit: 18, offset });
+    setItems((current) => [...current, ...data]);
+    setOffset(offset + data.length);
+    setHasMore(data.length === 18);
     setLoadingMore(false);
   };
 
@@ -664,12 +657,11 @@ function AdminDashboard({ user }) {
         description: form.description,
         category: form.category,
         imageUrl,
-        storagePath,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        storagePath
       };
-      const docRef = await addDoc(collection(db, "gallery"), metadata);
-      setItems((current) => [{ id: docRef.id, ...metadata }, ...current]);
+      const createdItem = await createGallery(metadata);
+      setItems((current) => [createdItem, ...current]);
+      setOffset((current) => current + 1);
       setForm({ title: "", description: "", category: "Restorasi", file: null });
       event.target.reset();
     } finally {
@@ -679,16 +671,18 @@ function AdminDashboard({ user }) {
   };
 
   const updateItem = async (item, changes) => {
-    await updateDoc(doc(db, "gallery", item.id), { ...changes, updatedAt: serverTimestamp() });
-    setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, ...changes } : entry));
+    const updatedItem = await updateGallery(item.id, changes);
+    setItems((current) => current.map((entry) => (entry.id === item.id ? { ...entry, ...updatedItem } : entry)));
   };
 
   const deleteItem = async (item) => {
     const confirmed = window.confirm(`Hapus "${item.title}" dari galeri?`);
     if (!confirmed) return;
 
-    await deleteDoc(doc(db, "gallery", item.id));
-    if (item.storagePath || item.imageUrl) await deleteImage(item.storagePath || item.imageUrl).catch(() => {});
+    if (item.storagePath || item.imageUrl) {
+      await deleteImage(item.storagePath || item.imageUrl).catch(() => {});
+    }
+    await deleteGallery(item.id);
     setItems((current) => current.filter((entry) => entry.id !== item.id));
   };
 
@@ -740,7 +734,7 @@ function AdminDashboard({ user }) {
                   />
                 ))}
               </div>
-              {lastDoc && <button className="btn ghost load-more" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Memuat..." : "Muat Lagi"}</button>}
+              {hasMore && <button className="btn ghost load-more" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Memuat..." : "Muat Lagi"}</button>}
             </>
           )}
         </section>
