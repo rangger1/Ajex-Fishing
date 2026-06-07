@@ -47,13 +47,8 @@ import {
   startAfter,
   updateDoc
 } from "firebase/firestore";
-import {
-  deleteObject,
-  getDownloadURL,
-  ref,
-  uploadBytesResumable
-} from "firebase/storage";
-import { auth, db, isFirebaseConfigured, storage } from "./firebase";
+import { auth, db, isFirebaseConfigured } from "./firebase";
+import { deleteImage, isSupabaseConfigured, uploadImage as uploadToSupabase } from "./lib/supabaseStorage";
 import "./styles.css";
 
 const ADMIN_WHATSAPP = import.meta.env.VITE_ADMIN_WHATSAPP || "6281234567890";
@@ -659,25 +654,17 @@ function AdminDashboard({ user }) {
     try {
       const compressed = await compressImage(form.file);
       const filePath = `gallery/${Date.now()}-${slugify(form.title || form.file.name)}.jpg`;
-      const imageRef = ref(storage, filePath);
-      const task = uploadBytesResumable(imageRef, compressed, { contentType: "image/jpeg" });
-
-      await new Promise((resolve, reject) => {
-        task.on(
-          "state_changed",
-          (snapshot) => setUploadProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)),
-          reject,
-          resolve
-        );
+      const { publicUrl: imageUrl, path: storagePath } = await uploadToSupabase(compressed, filePath, {
+        onProgress: setUploadProgress
       });
+      setUploadProgress(100);
 
-      const imageUrl = await getDownloadURL(imageRef);
       const metadata = {
         title: form.title,
         description: form.description,
         category: form.category,
         imageUrl,
-        storagePath: filePath,
+        storagePath,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -701,7 +688,7 @@ function AdminDashboard({ user }) {
     if (!confirmed) return;
 
     await deleteDoc(doc(db, "gallery", item.id));
-    if (item.storagePath) await deleteObject(ref(storage, item.storagePath)).catch(() => {});
+    if (item.storagePath || item.imageUrl) await deleteImage(item.storagePath || item.imageUrl).catch(() => {});
     setItems((current) => current.filter((entry) => entry.id !== item.id));
   };
 

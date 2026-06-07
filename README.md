@@ -39,9 +39,10 @@ Variable yang diperlukan:
 VITE_FIREBASE_API_KEY
 VITE_FIREBASE_AUTH_DOMAIN
 VITE_FIREBASE_PROJECT_ID
-VITE_FIREBASE_STORAGE_BUCKET
 VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
 VITE_ADMIN_WHATSAPP
 VITE_FACEBOOK_URL
 VITE_TIKTOK_URL
@@ -92,7 +93,7 @@ Untuk hasil terbaik, generate gambar 16:9 dari prompt tersebut, lalu simpan seba
 2. Aktifkan Authentication dengan provider Email/Password.
 3. Buat user admin di Authentication.
 4. Aktifkan Firestore Database.
-5. Aktifkan Firebase Storage.
+5. Buat project di Supabase dan buat bucket `ajex-fishing`.
 6. Isi environment variable di Vercel.
 
 ## Struktur Koleksi Firestore
@@ -109,7 +110,7 @@ gallery
    └─ updatedAt
 ```
 
-`storagePath` ditambahkan agar file di Firebase Storage bisa ikut dihapus saat admin menghapus data galeri.
+`storagePath` ditambahkan agar file di storage bisa ikut dihapus saat admin menghapus data galeri.
 
 ## Firestore Rules
 
@@ -128,20 +129,9 @@ service cloud.firestore {
 }
 ```
 
-## Storage Rules
+## Supabase Storage
 
-```js
-rules_version = '2';
-
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /gallery/{fileName} {
-      allow read: if true;
-      allow write, delete: if request.auth != null;
-    }
-  }
-}
-```
+Gunakan bucket Supabase `ajex-fishing` dengan file public agar gambar dapat ditampilkan langsung dari URL.
 
 ## Halaman
 
@@ -181,9 +171,10 @@ Masukkan key berikut satu per satu:
 VITE_FIREBASE_API_KEY
 VITE_FIREBASE_AUTH_DOMAIN
 VITE_FIREBASE_PROJECT_ID
-VITE_FIREBASE_STORAGE_BUCKET
 VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
 VITE_ADMIN_WHATSAPP
 VITE_FACEBOOK_URL
 VITE_TIKTOK_URL
