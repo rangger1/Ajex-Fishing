@@ -134,6 +134,7 @@ function PublicSite() {
 
     getGallery({ limit: 24 })
       .then((data) => {
+        console.log("GALLERY API RESPONSE", data);
         if (!active) return;
         setGallery(data.length ? data : fallbackGallery);
       })
@@ -152,6 +153,10 @@ function PublicSite() {
   }, []);
 
   useEffect(() => {
+    console.log("GALLERY STATE", gallery);
+  }, [gallery]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       setTestimonialIndex((index) => (index + 1) % testimonials.length);
     }, 5500);
@@ -163,6 +168,10 @@ function PublicSite() {
     if (activeCategory === "Semua") return gallery.length ? gallery : fallbackGallery;
     return (gallery.length ? gallery : fallbackGallery).filter((item) => item.category === activeCategory);
   }, [activeCategory, gallery]);
+
+  useEffect(() => {
+    console.log("FILTERED GALLERY", filteredGallery);
+  }, [filteredGallery]);
 
   const whatsappLink = makeWhatsAppLink(
     "Halo AJEX FISHING, saya ingin konsultasi restorasi atau custom peralatan mancing."
@@ -310,7 +319,7 @@ function PublicSite() {
             ) : (
               <div className="masonry">
                 {filteredGallery.map((item) => (
-                  <button className="gallery-item reveal" key={item.id} onClick={() => setPreview(item)}>
+                  <button className="gallery-item" key={item.id} onClick={() => setPreview(item)}>
                     <img src={item.imageUrl} alt={item.title} loading="lazy" />
                     <span>
                       <strong>{item.title}</strong>

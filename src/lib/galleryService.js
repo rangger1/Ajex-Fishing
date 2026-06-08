@@ -24,6 +24,8 @@ export async function getGallery({ limit = 24, offset = 0 } = {}) {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
+  console.log("SUPABASE DATA", data);
+
   if (error) throw error;
 
   return (data || []).map(mapGalleryRow);
