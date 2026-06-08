@@ -49,44 +49,6 @@ const WEB_LOGO_FALLBACK = "/assets/ajex-logo-web.svg";
 
 const categories = ["Semua", "Restorasi", "Custom Float", "Rebuild Joran", "Wrapping", "Reel", "Dokumentasi"];
 
-const fallbackGallery = [
-  {
-    id: "sample-1",
-    title: "Restorasi Joran Patah",
-    description: "Blank diperkuat, alignment ring dirapikan, dan finishing dibuat kembali solid.",
-    category: "Restorasi",
-    imageUrl: "https://images.unsplash.com/photo-1541742425281-c1d3fc8aff96?auto=format&fit=crop&w=900&q=82"
-  },
-  {
-    id: "sample-2",
-    title: "Pembuatan Float Custom",
-    description: "Float dibuat sesuai kebutuhan arus, kedalaman, warna marker, dan karakter spot.",
-    category: "Custom Float",
-    imageUrl: "https://images.unsplash.com/photo-1529230117010-b6c436154f25?auto=format&fit=crop&w=900&q=82"
-  },
-  {
-    id: "sample-3",
-    title: "Custom Wrapping",
-    description: "Wrapping rapi dengan kombinasi warna yang disesuaikan dengan karakter pemilik.",
-    category: "Wrapping",
-    imageUrl: "https://images.unsplash.com/photo-1561016444-14f747499547?auto=format&fit=crop&w=900&q=82"
-  },
-  {
-    id: "sample-4",
-    title: "Servis Reel",
-    description: "Pembersihan, pengecekan putaran, dan perawatan komponen agar reel kembali nyaman.",
-    category: "Reel",
-    imageUrl: "https://images.unsplash.com/photo-1517769826396-6eb1f4f1c290?auto=format&fit=crop&w=900&q=82"
-  },
-  {
-    id: "sample-5",
-    title: "Dokumentasi Workshop",
-    description: "Proses pengerjaan custom build, rebuild, dan restorasi perlengkapan memancing.",
-    category: "Dokumentasi",
-    imageUrl: "https://images.unsplash.com/photo-1534951009808-766178b47a4f?auto=format&fit=crop&w=900&q=82"
-  }
-];
-
 const services = [
   ["Restorasi Joran Patah", "Perbaikan blank, sambungan, ring, dan finishing agar joran kembali kuat dipakai.", Wrench],
   ["Rebuild Joran dari Nol", "Perakitan ulang dari blank, handle, ring guide, wrapping, sampai finishing akhir.", Wand2],
@@ -125,7 +87,7 @@ function PublicSite() {
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      setGallery(fallbackGallery);
+      setGallery([]);
       setLoadingGallery(false);
       return;
     }
@@ -136,11 +98,11 @@ function PublicSite() {
       .then((data) => {
         console.log("GALLERY API RESPONSE", data);
         if (!active) return;
-        setGallery(data.length ? data : fallbackGallery);
+        setGallery(data || []);
       })
       .catch(() => {
         if (!active) return;
-        setGallery(fallbackGallery);
+        setGallery([]);
       })
       .finally(() => {
         if (!active) return;
@@ -165,8 +127,8 @@ function PublicSite() {
   }, []);
 
   const filteredGallery = useMemo(() => {
-    if (activeCategory === "Semua") return gallery.length ? gallery : fallbackGallery;
-    return (gallery.length ? gallery : fallbackGallery).filter((item) => item.category === activeCategory);
+    if (activeCategory === "Semua") return gallery;
+    return gallery.filter((item) => item.category === activeCategory);
   }, [activeCategory, gallery]);
 
   useEffect(() => {
@@ -316,7 +278,7 @@ function PublicSite() {
             </div>
             {loadingGallery ? (
               <div className="center-state"><Loader2 className="spin" /> Memuat galeri...</div>
-            ) : (
+            ) : filteredGallery.length ? (
               <div className="masonry">
                 {filteredGallery.map((item) => (
                   <button className="gallery-item" key={item.id} onClick={() => setPreview(item)}>
@@ -328,6 +290,8 @@ function PublicSite() {
                   </button>
                 ))}
               </div>
+            ) : (
+              <div className="center-state">Galeri belum tersedia. Silakan upload gambar asli terlebih dahulu.</div>
             )}
           </div>
         </section>
