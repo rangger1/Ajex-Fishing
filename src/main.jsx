@@ -38,7 +38,7 @@ import { deleteImage, isSupabaseConfigured, uploadImage as uploadToSupabase } fr
 import { createGallery, deleteGallery, getGallery, updateGallery } from "./lib/galleryService";
 import "./styles.css";
 
-const ADMIN_WHATSAPP = import.meta.env.VITE_ADMIN_WHATSAPP || "6287854025978";
+const ADMIN_WHATSAPP = import.meta.env.VITE_ADMIN_WHATSAPP || "6287854025938";
 const FACEBOOK_URL = import.meta.env.VITE_FACEBOOK_URL || "https://www.facebook.com/putra.ajex.3/photos";
 const TIKTOK_URL = import.meta.env.VITE_TIKTOK_URL || "https://www.tiktok.com/@putradanisa";
 const BUSINESS_ADDRESS = import.meta.env.VITE_BUSINESS_ADDRESS || "Alamat Workshop AJEX FISHING";
